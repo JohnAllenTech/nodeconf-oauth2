@@ -38,29 +38,24 @@ module.exports = async function (fastify, opts) {
       await this.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
     reply.setCookie("token", token.access_token, { secure: true });
-    if (token?.refresh_token) {
-      reply.setCookie("refresh_token", token?.refresh_token, {
-        secure: true,
-      });
-    }
-
-    reply.send(token);
+    reply.send({ token });
   });
 
-  fastify.get("/refresh", async function (request, reply) {
-    const refreshToken = request?.cookies?.refresh_token;
+  fastify.post("/refresh", async function (request, reply) {
+    const token = request.body.token;
 
-    if (!refreshToken) {
+    if (!token) {
       reply.status(404).send({ message: "refresh token not found" });
     }
 
     const response = await this.googleOAuth2.getNewAccessTokenUsingRefreshToken(
-      refreshToken
+      token
     );
 
     reply.setCookie("token", response.access_token, {
       secure: true,
     });
+
     reply.send(response);
   });
 
