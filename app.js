@@ -4,9 +4,7 @@ const path = require("path");
 const AutoLoad = require("@fastify/autoload");
 const oauthPlugin = require("@fastify/oauth2");
 const axios = require("axios");
-
-// Pass --options via CLI arguments in command to enable these options.
-module.exports.options = {};
+const errors = require("http-errors");
 
 module.exports = async function (fastify, opts) {
   // This loads all plugins defined in plugins
@@ -14,13 +12,6 @@ module.exports = async function (fastify, opts) {
   // through your application
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, "plugins"),
-    options: Object.assign({}, opts),
-  });
-
-  // This loads all plugins defined in routes
-  // define your routes in one of these
-  fastify.register(AutoLoad, {
-    dir: path.join(__dirname, "routes"),
     options: Object.assign({}, opts),
   });
 
@@ -46,7 +37,6 @@ module.exports = async function (fastify, opts) {
     const { token } =
       await this.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
-    console.log(token);
     reply.setCookie("token", token.id_token, { secure: true });
     reply.send(token);
   });
@@ -57,7 +47,6 @@ module.exports = async function (fastify, opts) {
       preValidation: [validateToken],
     },
     async function (_request, reply) {
-      x;
       const { data } = await axios.get(
         "https://cataas.com/cat?type=square&fit=cover&position=top"
       );
@@ -70,19 +59,15 @@ module.exports = async function (fastify, opts) {
 const validateToken = async (req) => {
   {
     const token = req?.cookies?.token;
-    console.log("prevalidate started");
-    console.log(token);
 
-    if (!token) throw "Not authenticated";
+    if (!token) throw new errors.Forbidden("Token not present");
 
     const response = await axios.get(
       "https://oauth2.googleapis.com/tokeninfo?id_token=" + token
     );
 
     if (response.status !== 200) {
-      throw "Not authenticated";
+      throw new errors.Forbidden("Invalid Token");
     }
-    console.log("prevalidate finished");
-    return 1;
   }
 };
