@@ -1,5 +1,6 @@
-# Getting Started with [Fastify-CLI](https://www.npmjs.com/package/fastify-cli)
-This project was bootstrapped with Fastify-CLI.
+# Getting Started with [Google oauth2](https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow)
+
+This is where you can find out how to create a google oauth client and secret. This values are needed for the workshop
 
 ## Available Scripts
 

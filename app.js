@@ -37,12 +37,35 @@ module.exports = async function (fastify, opts) {
     const { token } =
       await this.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
-    reply.setCookie("token", token.id_token, { secure: true });
+    reply.setCookie("token", token.access_token, { secure: true });
+    if (token?.refresh_token) {
+      reply.setCookie("refresh_token", token?.refresh_token, {
+        secure: true,
+      });
+    }
+
     reply.send(token);
   });
 
+  fastify.get("/refresh", async function (request, reply) {
+    const refreshToken = request?.cookies?.refresh_token;
+
+    if (!refreshToken) {
+      reply.status(404).send({ message: "refresh token not found" });
+    }
+
+    const response = await this.googleOAuth2.getNewAccessTokenUsingRefreshToken(
+      refreshToken
+    );
+
+    reply.setCookie("token", response.access_token, {
+      secure: true,
+    });
+    reply.send(response);
+  });
+
   fastify.get(
-    "/cats",
+    "/protected/cats",
     {
       preValidation: [validateToken],
     },
@@ -54,6 +77,14 @@ module.exports = async function (fastify, opts) {
       reply.type("image/jpeg").send(data);
     }
   );
+
+  fastify.get("/unprotected/cats", {}, async function (_request, reply) {
+    const { data } = await axios.get(
+      "https://cataas.com/cat?type=square&fit=cover&position=top"
+    );
+
+    reply.type("image/jpeg").send(data);
+  });
 };
 
 const validateToken = async (req) => {
@@ -63,7 +94,7 @@ const validateToken = async (req) => {
     if (!token) throw new errors.Forbidden("Token not present");
 
     const response = await axios.get(
-      "https://oauth2.googleapis.com/tokeninfo?id_token=" + token
+      "https://oauth2.googleapis.com/tokeninfo?access_token=" + token
     );
 
     if (response.status !== 200) {
